@@ -1,6 +1,6 @@
 import { adaptQuote, analyzeBook, settleEv, type Plan } from "@/lib/engine/analyze";
 import { backtestDigit, backtestRise, type BacktestReport } from "@/lib/engine/backtest";
-import { backtestCategories, backtestDigitEngine, digitQuoteBreakdown, rankDigitBacktests } from "@/lib/engine/digit-engines";
+import { backtestCategories, backtestDigitEngine, digitQuoteBreakdown, NO_VERIFIED_OOS, rankDigitBacktests } from "@/lib/engine/digit-engines";
 import { digitChoices, fairDigit } from "@/lib/engine/math";
 import { CONTRACT_BY_TYPE, contractName } from "@/lib/engine/catalog";
 import { checkDigitProposal, restoreDigitPick } from "@/lib/engine/contract-check";
@@ -493,12 +493,14 @@ export async function runBacktest(symbol: string, type: string): Promise<Backtes
         referenceRate: fairDigit(type, "0"),
         breakevenPayout: null,
         perTradeEv: null,
-        note: "Pick a digit from 0 to 9. Matches and Differs were not backtested on a rotated digit. No expected return was invented. NO VERIFIED EDGE — INSUFFICIENT EVIDENCE.",
+        note: `Pick a digit from 0 to 9. Matches and Differs were not backtested on a rotated digit. No expected return was invented. ${NO_VERIFIED_OOS}`,
         lines: [
           "A. Synthetic probability test was not run without a selected digit.",
           "B. Historical tick simulation was not scored.",
           "C. SIMULATED USING CURRENT PAYOUT was not run. No payout was invented.",
-          "D. Historical Deriv proposal performance is not available. Demo and live records were not combined.",
+          "D. Historical Deriv proposal performance is not available. None was invented.",
+          "E. Demo execution records were not used.",
+          "F. Verified live execution records were not used.",
         ],
       };
     } else if (!profile.autoBarrier) {
@@ -509,12 +511,14 @@ export async function runBacktest(symbol: string, type: string): Promise<Backtes
         referenceRate: fairDigit(type, "0"),
         breakevenPayout: null,
         perTradeEv: null,
-        note: "SELECT A BARRIER. Auto barrier selection is off, so this backtest did not invent an Over or Under digit. NO VERIFIED EDGE — INSUFFICIENT EVIDENCE.",
+        note: `SELECT A BARRIER. Auto barrier selection is off, so this backtest did not invent an Over or Under digit. ${NO_VERIFIED_OOS}`,
         lines: [
           "A. Synthetic probability test was not run without a barrier.",
           "B. Historical tick simulation was not scored.",
           "C. SIMULATED USING CURRENT PAYOUT was not run.",
-          "D. Historical Deriv proposal performance is not available.",
+          "D. Historical Deriv proposal performance is not available. None was invented.",
+          "E. Demo execution records were not used.",
+          "F. Verified live execution records were not used.",
         ],
       };
     } else barriers = choices.map(String);
@@ -549,6 +553,13 @@ export async function runBacktest(symbol: string, type: string): Promise<Backtes
           minConfidence: 0.5,
           lookback: Math.max(20, profile.shortWindow),
           engine: type,
+          train: profile.trainSize,
+          validation: profile.validationSize,
+          final: profile.finalSize,
+          periods: profile.validationPeriods,
+          minOos: profile.minOos,
+          comparisons: Math.max(1, barriers.length),
+          z: profile.intervalZ,
         }),
       );
     }

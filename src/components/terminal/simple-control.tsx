@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CONTRACTS, CONTRACT_BY_TYPE } from "@/lib/engine/catalog";
 import { defaultModules, MODULE_NAMES, STRATEGY_GROUPS, type ModuleId } from "@/lib/engine/modules";
-import { applyPreset, defaultProfile, fieldsFor, validateProfile, type PresetName, type StrategyProfile } from "@/lib/engine/profiles";
+import { applyPreset, defaultProfile, fieldsFor, validateProfile, CONFIDENCE_LEVELS, type PresetName, type StrategyProfile } from "@/lib/engine/profiles";
 import { resetLimits } from "@/lib/desk/session";
 import { flashText, setSettingsFlash } from "@/lib/desk/settings-flash";
 import { useDesk } from "@/lib/desk/store";
@@ -35,7 +35,12 @@ const LABEL: Record<string, string> = {
   mediumWindow: "Medium digit window",
   longWindow: "Long digit window",
   minEffective: "Minimum effective sample",
-  intervalZ: "Confidence interval z",
+  intervalZ: "Confidence interval",
+  trainSize: "Training sample",
+  validationSize: "Validation sample",
+  finalSize: "Final out-of-sample sample",
+  validationPeriods: "Validation periods",
+  minOos: "Minimum out-of-sample evidence",
   method: "Probability method",
   walkForward: "Require a held-out period",
   autoBarrier: "Auto barrier selection",
@@ -309,6 +314,25 @@ function Editor({
           checked={on}
           onChange={(event) => onChange(field, event.target.checked)}
         />
+      </label>
+    );
+  }
+  if (field === "intervalZ") {
+    const current = CONFIDENCE_LEVELS.reduce((best, item) => (Math.abs(item.z - draft.intervalZ) < Math.abs(best.z - draft.intervalZ) ? item : best));
+    return (
+      <label className="block text-xs tracking-wide text-muted uppercase">
+        Confidence interval
+        <select
+          value={String(current.z)}
+          onChange={(event) => onChange("intervalZ", Number(event.target.value))}
+          className="mt-1 min-h-11 w-full rounded-md border border-line bg-bg px-3 text-sm text-fg normal-case"
+        >
+          {CONFIDENCE_LEVELS.map((item) => (
+            <option key={item.z} value={item.z}>
+              {item.label}
+            </option>
+          ))}
+        </select>
       </label>
     );
   }

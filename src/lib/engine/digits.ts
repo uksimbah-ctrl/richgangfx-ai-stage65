@@ -60,7 +60,10 @@ export function studyDigit(args: {
   };
 }
 
-/** Barrier with the highest lower bound. Null when none can be scored. */
+/**
+ * Barrier with the highest lower bound on the digits passed in.
+ * Those digits must be the training period only. Validation and final-test ticks must not be included.
+ */
 export function bestDigitBarrier(
   digits: number[],
   type: string,

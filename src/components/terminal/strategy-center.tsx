@@ -3,6 +3,7 @@ import { CONTRACTS, CONTRACT_BY_TYPE } from "@/lib/engine/catalog";
 import { optimizeDigit, optimizeEma, type OptRow } from "@/lib/engine/optimize";
 import {
   applyPreset,
+  CONFIDENCE_LEVELS,
   defaultProfile,
   fieldsFor,
   validateProfile,
@@ -42,7 +43,12 @@ const LABELS: Record<string, string> = {
   mediumWindow: "Medium window",
   longWindow: "Long window",
   minEffective: "Minimum effective sample",
-  intervalZ: "Confidence interval z",
+  intervalZ: "Confidence interval",
+  trainSize: "Training sample",
+  validationSize: "Validation sample",
+  finalSize: "Final out-of-sample sample",
+  validationPeriods: "Validation periods",
+  minOos: "Minimum out-of-sample evidence",
   method: "Probability method",
   walkForward: "Walk-forward validation",
   autoBarrier: "Auto barrier selection",
@@ -507,6 +513,25 @@ function Field({
       <label className="flex min-h-11 items-center justify-between gap-3 rounded-md border border-line px-3 text-sm">
         {label}
         <input type="checkbox" checked={on} onChange={(event) => onChange(field, event.target.checked)} />
+      </label>
+    );
+  }
+  if (field === "intervalZ") {
+    const current = CONFIDENCE_LEVELS.reduce((best, item) => (Math.abs(item.z - draft.intervalZ) < Math.abs(best.z - draft.intervalZ) ? item : best));
+    return (
+      <label className="block text-xs tracking-wide text-muted uppercase">
+        {label}
+        <select
+          value={String(current.z)}
+          onChange={(event) => onChange("intervalZ", Number(event.target.value))}
+          className="mt-1 min-h-11 w-full rounded-md border border-line bg-bg px-3 text-sm text-fg"
+        >
+          {CONFIDENCE_LEVELS.map((item) => (
+            <option key={item.z} value={item.z}>
+              {item.label}
+            </option>
+          ))}
+        </select>
       </label>
     );
   }

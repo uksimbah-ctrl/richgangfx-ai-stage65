@@ -1,6 +1,7 @@
 import { explainDigits } from "@/lib/engine/modules";
 import { NO_VERIFIED_EDGE } from "@/lib/engine/digit-engines";
 import { contractName } from "@/lib/engine/catalog";
+import { confidenceLabel } from "@/lib/engine/profiles";
 import { useDesk } from "@/lib/desk/store";
 
 export function DigitInsight() {
@@ -68,6 +69,11 @@ export function DigitInsight() {
         </div>
       </div>
       <p className="col-span-2 text-sm text-pretty text-fg">{card.reason}</p>
+      {profile ? (
+        <p className="col-span-2 text-sm text-pretty text-muted">
+          This contract's evidence settings: {confidenceLabel(profile.intervalZ)} interval. Training {profile.trainSize}. Validation {profile.validationSize}. Final {profile.finalSize} across {profile.validationPeriods} periods. Minimum effective out-of-sample {profile.minOos}. 95% is the recommended research interval. Stake and duration are unchanged.
+        </p>
+      ) : null}
     </section>
   );
 }

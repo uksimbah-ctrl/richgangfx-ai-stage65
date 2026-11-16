@@ -32,8 +32,18 @@ export type StrategyProfile = {
   longWindow: number;
   /** Minimum effective sample after dependence. Not a win rate. */
   minEffective: number;
-  /** Normal z for the equal-tail interval. 1.64 is about 90%. */
+  /** Normal z for the equal-tail interval. 1.64 is about 90%. 1.96 (95%) is the recommended research setting. */
   intervalZ: number;
+  /** Training ticks used only to choose an auto barrier. Not a stake. */
+  trainSize: number;
+  /** Later ticks that accept or reject that one barrier. They do not choose another. */
+  validationSize: number;
+  /** Untouched ticks in each final period. */
+  finalSize: number;
+  /** How many separate final periods must be scored. Two is the minimum. */
+  validationPeriods: number;
+  /** Effective out-of-sample outcomes required before a result can be called supported. */
+  minOos: number;
   /** When false, a held-out period does not have to clear the baseline. Sign disagreement still waits. */
   walkForward: boolean;
   /** The only implemented digit probability method. */
@@ -89,6 +99,11 @@ export function defaultProfile(type: string): StrategyProfile {
     longWindow: 300,
     minEffective: 40,
     intervalZ: 1.64,
+    trainSize: 80,
+    validationSize: 40,
+    finalSize: 40,
+    validationPeriods: 3,
+    minOos: 40,
     walkForward: digit,
     method: "beta-binomial",
     autoBarrier: false,
@@ -104,6 +119,17 @@ export function defaultProfile(type: string): StrategyProfile {
     growthRate: 0.01,
     version: 1,
   };
+}
+
+export const CONFIDENCE_LEVELS = [
+  { z: 1.64, label: "90%" },
+  { z: 1.96, label: "95% — recommended for research" },
+  { z: 2.58, label: "99%" },
+] as const;
+
+export function confidenceLabel(z: number): string {
+  const nearest = CONFIDENCE_LEVELS.reduce((best, item) => (Math.abs(item.z - z) < Math.abs(best.z - z) ? item : best));
+  return nearest.label;
 }
 
 export function defaultBook(): Record<string, StrategyProfile> {
@@ -149,6 +175,21 @@ export function validateProfile(profile: StrategyProfile): string[] {
     if (!Number.isFinite(profile.intervalZ) || profile.intervalZ < 1 || profile.intervalZ > 2.58) {
       errors.push("Confidence interval level must be between 1 and 2.58.");
     }
+    if (!Number.isFinite(profile.trainSize) || profile.trainSize < 40 || profile.trainSize > 5000) {
+      errors.push("Training sample must be between 40 and 5000 ticks.");
+    }
+    if (!Number.isFinite(profile.validationSize) || profile.validationSize < 20 || profile.validationSize > 5000) {
+      errors.push("Validation sample must be between 20 and 5000 ticks.");
+    }
+    if (!Number.isFinite(profile.finalSize) || profile.finalSize < 20 || profile.finalSize > 5000) {
+      errors.push("Final out-of-sample sample must be between 20 and 5000 ticks.");
+    }
+    if (!Number.isInteger(profile.validationPeriods) || profile.validationPeriods < 2 || profile.validationPeriods > 12) {
+      errors.push("Validation periods must be between 2 and 12.");
+    }
+    if (!Number.isFinite(profile.minOos) || profile.minOos < 40 || profile.minOos > 5000) {
+      errors.push("Minimum out-of-sample evidence must be at least 40 effective outcomes.");
+    }
     if (profile.method !== "beta-binomial") errors.push("Probability method must stay beta-binomial.");
     if (typeof profile.walkForward !== "boolean") errors.push("Walk-forward validation must be on or off.");
     if ((profile.type === "DIGITOVER" || profile.type === "DIGITUNDER") && typeof profile.autoBarrier !== "boolean") {
@@ -172,6 +213,11 @@ export function clampProfile(profile: StrategyProfile): StrategyProfile {
     minSample: Math.max(1, Math.round(profile.minSample)),
     minEffective: Math.min(2000, Math.max(10, Math.round(profile.minEffective || 40))),
     intervalZ: Math.min(2.58, Math.max(1, profile.intervalZ || 1.64)),
+    trainSize: Math.min(5000, Math.max(40, Math.round(profile.trainSize || 80))),
+    validationSize: Math.min(5000, Math.max(20, Math.round(profile.validationSize || 40))),
+    finalSize: Math.min(5000, Math.max(20, Math.round(profile.finalSize || 40))),
+    validationPeriods: Math.min(12, Math.max(2, Math.round(profile.validationPeriods || 3))),
+    minOos: Math.min(5000, Math.max(40, Math.round(profile.minOos || 40))),
     method: "beta-binomial",
     autoBarrier: profile.autoBarrier === true,
   };
@@ -242,7 +288,7 @@ export function fieldsFor(type: string): string[] {
     "durationUnit",
   ];
   if (family === "digit") {
-    const fields = [...common, "minSample", "shortWindow", "mediumWindow", "longWindow", "minEffective", "intervalZ", "method", "walkForward"];
+    const fields = [...common, "minSample", "shortWindow", "mediumWindow", "longWindow", "minEffective", "intervalZ", "trainSize", "validationSize", "finalSize", "validationPeriods", "minOos", "method", "walkForward"];
     if (type === "DIGITOVER" || type === "DIGITUNDER") fields.push("autoBarrier");
     if (type === "DIGITOVER" || type === "DIGITUNDER" || type === "DIGITMATCH" || type === "DIGITDIFF") fields.push("barrier");
     return fields;

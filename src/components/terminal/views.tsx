@@ -639,7 +639,7 @@ function idleReason(mode, tradeType, trading, emergency, account, armDemo, armRe
 	const choices = digitChoices(tradeType);
 	if (choices && (digitPick == null || !choices.includes(digitPick))) {
 		if (tradeType === "DIGITMATCH" || tradeType === "DIGITDIFF") return "Pick a digit from 0 to 9. Matches and Differs will not trade until you do.";
-		return autoBarrier ? "Auto barrier selection is on. A barrier is used only if it qualifies. Qualification is not a verified edge." : "SELECT A BARRIER. Auto barrier selection is off.";
+		return autoBarrier ? "Auto barrier selection is on. Training chooses one barrier. Validation and the final period only judge that barrier. A miss is not replaced. Qualification is not a verified edge." : "SELECT A BARRIER. Auto barrier selection is off.";
 	}
 	if (mode !== "auto") return "Switch to Full auto when you want the bot to buy.";
 	if (emergency) return "Emergency stop is on. New orders are blocked.";

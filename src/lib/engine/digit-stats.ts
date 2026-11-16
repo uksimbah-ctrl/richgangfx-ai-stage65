@@ -36,8 +36,9 @@ export function effectiveSample(flags: boolean[]): { n: number; hits: number; nE
   }
   const raw = den === 0 ? 0 : num / den;
   const rho = Math.max(-0.99, Math.min(0.99, raw));
+  // Negative correlation must not be turned into extra evidence.
   const shrunk = rho > 0 ? (n * (1 - rho)) / (1 + rho) : n;
-  return { n, hits, nEff: Math.min(n, Math.max(1, shrunk)), rho: rho > 0 ? rho : 0 };
+  return { n, hits, nEff: Math.min(n, Math.max(1, shrunk)), rho };
 }
 
 export function wilsonFromFlags(flags: boolean[], z = 1.64): { p: number; lo: number; hi: number; n: number; hits: number; nEff: number; rho: number } {

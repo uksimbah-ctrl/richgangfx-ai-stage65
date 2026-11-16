@@ -1,6 +1,5 @@
 import { CONTRACT_BY_TYPE, type ContractMeta, type Family } from "./catalog.ts";
-import { bestDigitBarrier } from "./digits.ts";
-import { studyContract } from "./digit-stats.ts";
+import { selectAutoBarrier } from "./digit-engines.ts";
 import { readDirection } from "./indicators.ts";
 import { defaultProfile, type StrategyProfile } from "./profiles.ts";
 import { approvedEntry, type ModuleConfig } from "./modules.ts";
@@ -271,33 +270,23 @@ function planDigit(meta: ContractMeta, f: Features, input: BookInput, offered: O
     if (picked != null) barrier = String(picked);
     else if (saved != null) barrier = String(saved);
     else if (profile.autoBarrier) {
-      const candidate = bestDigitBarrier(digits, meta.type, allowed, prior, z);
-      if (candidate == null) return base(input.symbol, meta, "stand-aside", "SELECT A BARRIER. No legal barrier could be scored, so no proposal was sent.", f);
-      const study = studyContract({
-        contract: meta.type,
-        quotes: f.quotes,
-        pip: input.pipSize,
-        barrier: String(candidate),
-        minSample: Math.max(20, profile.minSample),
-        minConfidence: 0.5,
-        strategy: "Auto barrier",
-        lookback: profile.shortWindow,
-        minEffective: profile.minEffective,
-        z: profile.intervalZ,
-        persist: profile.walkForward,
+      const selection = selectAutoBarrier({
+        digits,
+        type: meta.type,
+        allowed,
+        prior,
+        z: profile.intervalZ || z,
+        train: profile.trainSize,
+        validation: profile.validationSize,
+        final: profile.finalSize,
+        periods: profile.validationPeriods,
+        minOos: profile.minOos,
       });
-      if (study.status !== "yes") {
-        return base(
-          input.symbol,
-          meta,
-          "stand-aside",
-          `Auto barrier ${candidate} did not qualify. No proposal was sent. ${study.reason}`,
-          f,
-        );
+      if (!selection.supported || selection.barrier == null) {
+        return base(input.symbol, meta, "stand-aside", selection.reason, f);
       }
-      barrier = String(candidate);
-      const show = (value: number | null) => (value == null ? "—" : pct(value));
-      autoNote = `Auto barrier ${candidate}. Theoretical baseline ${show(study.fair)}. Observed ${show(study.observed)}. Estimate ${show(study.p)}. Sample ${study.sample}. Interval ${show(study.lo)} to ${show(study.hi)}. ${study.reason}`;
+      barrier = String(selection.barrier);
+      autoNote = selection.reason;
     } else {
       return base(input.symbol, meta, "stand-aside", "SELECT A BARRIER. Auto barrier selection is off, so Over and Under will not invent a digit.", f);
     }
@@ -318,7 +307,7 @@ function planDigit(meta: ContractMeta, f: Features, input: BookInput, offered: O
   };
   plan.rationale = [
     barrier ? `Barrier ${barrier}.` : "Even or odd, no barrier.",
-    autoNote ? "Auto barrier selection is on. The barrier still has to qualify, and qualification is not a verified edge." : "The selected barrier is not rotated into another contract.",
+    autoNote ? "Auto barrier selection used training ticks only. Validation and the final period were not used to choose it, and a failed barrier was not replaced." : "The selected barrier is not rotated into another contract.",
     "Buys on the next quote. Expected value is not a gate.",
   ];
   return plan;
